@@ -1,0 +1,152 @@
+/* Ink-wash wuxia theme */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #16130f;
+  --panel: #211c15;
+  --panel-edge: #3a3226;
+  --ink: #e8ddc8;
+  --ink-dim: #a89b80;
+  --accent: #c9302c;
+  --gold: #d4a94e;
+  --jade: #6fae8f;
+  --hp: #b5473f;
+  --mp: #4f7fa8;
+  --exp: #8a7a3d;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+  min-height: 100vh;
+}
+
+#app { max-width: 1100px; margin: 0 auto; padding: 12px; }
+
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 2px solid var(--panel-edge);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+h1 { font-size: 1.5rem; color: var(--gold); letter-spacing: 2px; }
+h1 .sub { font-size: 0.85rem; color: var(--ink-dim); letter-spacing: 1px; }
+
+#header-buttons button {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--panel-edge);
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+#header-buttons button:hover { border-color: var(--gold); }
+
+main { display: flex; gap: 12px; align-items: flex-start; }
+
+#stats-panel {
+  flex: 0 0 260px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 6px;
+  padding: 14px;
+  font-size: 0.85rem;
+}
+
+#stats-panel h2 { color: var(--gold); font-size: 1.15rem; margin-bottom: 2px; }
+.stat-loc { color: var(--ink-dim); margin-bottom: 10px; font-style: italic; }
+
+#stats-panel h3 {
+  margin: 12px 0 4px;
+  font-size: 0.9rem;
+  color: var(--jade);
+  border-bottom: 1px dashed var(--panel-edge);
+  padding-bottom: 2px;
+}
+
+.bar-wrap { margin-bottom: 6px; }
+.bar-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--ink-dim); }
+.bar { background: #0d0b08; border-radius: 3px; height: 10px; overflow: hidden; border: 1px solid var(--panel-edge); }
+.bar-fill { height: 100%; width: 100%; transition: width 0.3s; }
+.bar-fill.hp { background: var(--hp); }
+.bar-fill.mp { background: var(--mp); }
+.bar-fill.exp { background: var(--exp); }
+
+#stat-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+#stat-table td { padding: 2px 0; color: var(--ink-dim); }
+#stat-table td:last-child { text-align: right; color: var(--ink); }
+
+#stat-skills, #stat-items { list-style: none; }
+#stat-skills li, #stat-items li { padding: 2px 0; color: var(--ink); }
+#stat-skills li .skill-detail, #stat-items li .item-count { color: var(--ink-dim); font-size: 0.75rem; }
+
+.quest-text { color: var(--ink-dim); font-size: 0.8rem; line-height: 1.5; }
+
+#game-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#log {
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 6px;
+  padding: 16px;
+  height: 420px;
+  overflow-y: auto;
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+#log p { margin-bottom: 8px; }
+#log .narration { color: var(--ink); }
+#log .dialog { color: var(--jade); }
+#log .combat { color: #d8a0a0; }
+#log .system { color: var(--gold); }
+#log .heading {
+  color: var(--gold);
+  font-size: 1.1rem;
+  border-bottom: 1px dashed var(--panel-edge);
+  padding-bottom: 4px;
+  margin-top: 10px;
+}
+#log .dim { color: var(--ink-dim); font-size: 0.85rem; }
+
+#actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#actions button {
+  background: #2b241a;
+  color: var(--ink);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  padding: 9px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+#actions button:hover { border-color: var(--gold); color: var(--gold); }
+#actions button.danger { border-color: #5a2b28; color: #e0928d; }
+#actions button.danger:hover { border-color: var(--accent); color: var(--accent); }
+#actions button.primary { border-color: var(--gold); color: var(--gold); }
+#actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 800px) {
+  main { flex-direction: column; }
+  #stats-panel { flex: none; width: 100%; }
+  #log { height: 320px; }
+}

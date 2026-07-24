@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JYQXZ · 金庸群侠传 — A Wuxia Tale (MVP)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>金庸群侠传 <span class="sub">JYQXZ · A Wuxia Tale</span></h1>
+      <div id="header-buttons">
+        <button id="btn-save" title="Save game">💾 Save</button>
+        <button id="btn-load" title="Load game">📂 Load</button>
+        <button id="btn-reset" title="Restart from the beginning">🔄 Restart</button>
+      </div>
+    </header>
+
+    <main>
+      <aside id="stats-panel">
+        <h2 id="stat-name">—</h2>
+        <div id="stat-location" class="stat-loc">—</div>
+        <div class="bar-wrap">
+          <div class="bar-label">气血 HP <span id="stat-hp-text"></span></div>
+          <div class="bar"><div id="bar-hp" class="bar-fill hp"></div></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-label">内力 Inner Energy <span id="stat-mp-text"></span></div>
+          <div class="bar"><div id="bar-mp" class="bar-fill mp"></div></div>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-label">经验 EXP <span id="stat-exp-text"></span></div>
+          <div class="bar"><div id="bar-exp" class="bar-fill exp"></div></div>
+        </div>
+        <table id="stat-table">
+          <tr><td>境界 Level</td><td id="stat-level"></td></tr>
+          <tr><td>臂力 Strength</td><td id="stat-str"></td></tr>
+          <tr><td>身法 Agility</td><td id="stat-agi"></td></tr>
+          <tr><td>悟性 Insight</td><td id="stat-wis"></td></tr>
+          <tr><td>银两 Silver</td><td id="stat-gold"></td></tr>
+        </table>
+        <h3>武学 Martial Arts</h3>
+        <ul id="stat-skills"></ul>
+        <h3>行囊 Inventory</h3>
+        <ul id="stat-items"></ul>
+        <h3>任务 Journal</h3>
+        <div id="stat-quest" class="quest-text"></div>
+      </aside>
+
+      <section id="game-panel">
+        <div id="log"></div>
+        <div id="actions"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
