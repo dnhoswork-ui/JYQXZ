@@ -28,6 +28,14 @@ const SKILLS = {
     passive: true,
     desc: "Deep inner cultivation: +30 max inner energy, +20% damage, regenerates energy each turn.",
   },
+  tanzhi: {
+    id: "tanzhi",
+    name: "Divine Flicking Finger 弹指神通",
+    mpCost: 10,
+    mult: 2.0,
+    pierce: true,
+    desc: "A single flicked finger that slips past any guard — ignores the enemy's defense.",
+  },
 };
 
 const ITEMS = {
@@ -51,6 +59,43 @@ const ITEMS = {
     price: 30,
     desc: "Fragrant chicken baked in lotus leaves and clay. Restores 30 HP... or tempts a certain gluttonous elder.",
     heal: 30,
+  },
+  ironsword: {
+    id: "ironsword",
+    name: "Iron Sword 铁剑",
+    price: 80,
+    kind: "weapon",
+    atk: 5,
+    desc: "A plain but honest blade. +5 attack.",
+  },
+  buji: {
+    id: "buji",
+    name: "Padded Jacket 布甲",
+    price: 60,
+    kind: "armor",
+    def: 3,
+    desc: "Quilted cloth armor. −3 damage taken.",
+  },
+  greenedge: {
+    id: "greenedge",
+    name: "Greenedge Sword 青锋剑",
+    kind: "weapon",
+    atk: 12,
+    desc: "A sword of green-tinged steel, gift of the East Heretic. +12 attack.",
+  },
+  ruanwei: {
+    id: "ruanwei",
+    name: "Hedgehog Armor 软猬甲",
+    kind: "armor",
+    def: 8,
+    desc: "The famed soft armor of Peach Blossom Isle. −8 damage taken.",
+  },
+  guitou: {
+    id: "guitou",
+    name: "Ghost-Head Saber 鬼头刀",
+    kind: "weapon",
+    atk: 15,
+    desc: "The heavy saber Ghost-Faced Blade left on the summit. +15 attack.",
   },
 };
 
@@ -96,8 +141,40 @@ const ENEMIES = {
     name: "Ghost-Faced Blade 鬼面刀",
     hp: 220, atk: 22, def: 6, agi: 10,
     exp: 500, gold: 300,
-    boss: true,
+    boss: true, special: true,
     intro: "Atop the summit stands a figure in a ghost mask, saber gleaming with cold light. \"So the old man's whelp has come to die too.\"",
+  },
+  huangdao: {
+    id: "huangdao",
+    name: "Lord of Peach Blossom Isle 桃花岛主",
+    hp: 140, atk: 19, def: 5, agi: 12,
+    exp: 200, gold: 0,
+    sparring: true,
+    intro: "Jade flute in hand, the green-robed lord regards you coldly. \"You solved my maze. Now show me your kung fu is worth the trespass.\"",
+  },
+  xidu: {
+    id: "xidu",
+    name: "Venom of the West 西毒",
+    hp: 240, atk: 24, def: 6, agi: 11,
+    exp: 300, gold: 0,
+    sparring: true, special: true,
+    intro: 'A white-haired man descends the cliff head-first like a gecko. "A new generation dares the summit? Taste the Toad Stance!"',
+  },
+  dongxie: {
+    id: "dongxie",
+    name: "East Heretic 东邪",
+    hp: 280, atk: 26, def: 7, agi: 13,
+    exp: 400, gold: 0,
+    sparring: true, special: true,
+    intro: 'Flute-song drifts on the cloud-sea. "Rules are for the mediocre," the green-robed master says. "Let us see if you are worth breaking one for."',
+  },
+  beigai: {
+    id: "beigai",
+    name: "Hong Qigong, North Beggar 北丐洪七公",
+    hp: 320, atk: 27, def: 7, agi: 12,
+    exp: 500, gold: 0,
+    sparring: true, special: true,
+    intro: '"Ho! The chicken lad!" The old beggar tosses his gourd aside and grins. "Show me what my palms have become in your hands. Hold nothing back!"',
   },
 };
 
@@ -126,5 +203,11 @@ const LOCATIONS = {
     name: "Mount Hua 华山",
     ambient: "Knife-edge cliffs vanish into cloud. A plank path clings to the rock face, leading toward the summit.",
     routes: ["inn", "xiangyang", "shaolin"],
+  },
+  taohua: {
+    id: "taohua",
+    name: "Peach Blossom Island 桃花岛",
+    ambient: "Petals drift over paths that fork and fork again. Somewhere beyond the orchard, a jade flute is playing.",
+    routes: ["xiangyang"],
   },
 };

@@ -46,6 +46,8 @@ function newState(name, origin) {
     str: 10, agi: 8, wis: 8,
     gold: 50,
     skills: ["taizu"],
+    prof: { taizu: 0 },
+    equip: { weapon: null, armor: null },
     items: { jinchuang: 2 },
     location: "inn",
     quest: 0,
@@ -60,6 +62,22 @@ function newState(name, origin) {
 
 function hasSkill(id) { return state.skills.includes(id); }
 function hasPassive(id) { return hasSkill(id); }
+
+// Older saves lack fields added after the MVP; fill them in.
+function migrateState(s) {
+  s.prof = s.prof || {};
+  for (const id of s.skills) if (s.prof[id] === undefined) s.prof[id] = 0;
+  s.equip = s.equip || { weapon: null, armor: null };
+  s.flags = s.flags || {};
+  return s;
+}
+
+const CHENG = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+function chengOf(id) { return Math.min(10, Math.floor((state.prof[id] || 0) / 10) + 1); }
+function skillMult(s) { return s.mult * (1 + (chengOf(s.id) - 1) * 0.06); }
+
+function weaponAtk() { return state.equip.weapon ? ITEMS[state.equip.weapon].atk : 0; }
+function armorDef() { return state.equip.armor ? ITEMS[state.equip.armor].def : 0; }
 
 function questText() {
   if (state.quest === 0) return "Your master was cut down by a masked man. The innkeeper at Yueyang Inn may know something.";
@@ -90,7 +108,7 @@ function updateStats() {
     const li = document.createElement("li");
     li.innerHTML = s.passive
       ? `${s.name}`
-      : `${s.name} <span class="skill-detail">(×${s.mult} dmg, ${s.mpCost} energy)</span>`;
+      : `${s.name} <span class="skill-detail">(${CHENG[chengOf(id) - 1]}成 · ×${skillMult(s).toFixed(2)} dmg, ${s.mpCost} energy)</span>`;
     sk.appendChild(li);
   }
 
@@ -100,7 +118,8 @@ function updateStats() {
   if (entries.length === 0) it.innerHTML = `<li class="item-count">— empty —</li>`;
   for (const [id, n] of entries) {
     const li = document.createElement("li");
-    li.innerHTML = `${ITEMS[id].name} <span class="item-count">×${n}</span>`;
+    const equipped = state.equip.weapon === id || state.equip.armor === id ? " ✦equipped" : "";
+    li.innerHTML = `${ITEMS[id].name} <span class="item-count">×${n}${equipped}</span>`;
     it.appendChild(li);
   }
 
@@ -140,6 +159,7 @@ function addItem(id, n = 1) {
 function learnSkill(id) {
   if (hasSkill(id)) return;
   state.skills.push(id);
+  state.prof[id] = 0;
   const s = SKILLS[id];
   log(`📜 You have learned <b>${s.name}</b>! ${s.desc}`, "system");
   if (id === "jiuyang") {
@@ -166,7 +186,7 @@ function loadGame() {
     log("No saved game found.", "dim");
     return;
   }
-  state = JSON.parse(raw);
+  state = migrateState(JSON.parse(raw));
   state.combat = null;
   $("log").innerHTML = "";
   log("📂 Game loaded.", "system");
@@ -182,7 +202,7 @@ function resetGame() {
 
 // ---------- combat ----------
 
-function playerAtkBase() { return state.str + state.level * 2; }
+function playerAtkBase() { return state.str + state.level * 2 + weaponAtk(); }
 
 function startCombat(enemyId, opts = {}) {
   const tpl = ENEMIES[enemyId];
@@ -191,6 +211,8 @@ function startCombat(enemyId, opts = {}) {
     maxHp: tpl.hp,
     opts,
     defending: false,
+    turnCount: 0,
+    charging: false,
   };
   heading(`⚔ ${tpl.name}`);
   log(tpl.intro, "dialog");
@@ -224,7 +246,8 @@ function combatMenu() {
 function playerAttack(skill) {
   const c = state.combat;
   state.mp -= skill.mpCost;
-  let dmg = Math.round(playerAtkBase() * skill.mult) + rand(6) - c.enemy.def;
+  const def = skill.pierce ? 0 : c.enemy.def;
+  let dmg = Math.round(playerAtkBase() * skillMult(skill)) + rand(6) - def;
   if (hasPassive("jiuyang")) dmg = Math.round(dmg * 1.2);
   dmg = Math.max(1, dmg);
   let crit = "";
@@ -234,7 +257,17 @@ function playerAttack(skill) {
   }
   c.enemy.hp -= dmg;
   log(`You strike with ${skill.name} — <b>${dmg}</b> damage.${crit}`, "combat");
+  gainProficiency(skill.id);
   afterPlayerTurn();
+}
+
+function gainProficiency(id) {
+  const before = chengOf(id);
+  state.prof[id] = Math.min(100, (state.prof[id] || 0) + 2 + rand(3));
+  const after = chengOf(id);
+  if (after > before) {
+    log(`⚡ Your <b>${SKILLS[id].name}</b> advances to <b>${CHENG[after - 1]}成</b> mastery!`, "system");
+  }
 }
 
 function playerDefend() {
@@ -277,8 +310,22 @@ function afterPlayerTurn() {
 
 function enemyTurn() {
   const c = state.combat;
-  let dmg = c.enemy.atk + rand(5) - Math.floor(state.agi / 4);
+  c.turnCount += 1;
+  if (c.enemy.special && !c.charging && c.turnCount % 3 === 0) {
+    c.charging = true;
+    c.defending = false;
+    log(`⚠ ${c.enemy.name} gathers qi — a terrible strike is coming! <b>(Defend!)</b>`, "combat");
+    updateStats();
+    combatMenu();
+    return;
+  }
+  let dmg = c.enemy.atk + rand(5) - Math.floor(state.agi / 4) - armorDef();
   dmg = Math.max(1, dmg);
+  if (c.charging) {
+    c.charging = false;
+    dmg *= 2;
+    log(`${c.enemy.name} unleashes the charged strike!`, "combat");
+  }
   if (c.defending) {
     dmg = Math.ceil(dmg / 2);
     c.defending = false;
@@ -372,6 +419,44 @@ function openShop(stock, back) {
   setActions(actions);
 }
 
+// ---------- equipment ----------
+
+function ownedGear() {
+  return Object.entries(state.items)
+    .filter(([id, n]) => n > 0 && ITEMS[id].kind)
+    .map(([id]) => id);
+}
+
+function equipMenu() {
+  heading("🗡 Equipment");
+  const w = state.equip.weapon ? ITEMS[state.equip.weapon].name : "— bare hands —";
+  const ar = state.equip.armor ? ITEMS[state.equip.armor].name : "— common clothes —";
+  log(`Weapon: <b>${w}</b> (+${weaponAtk()} attack) · Armor: <b>${ar}</b> (−${armorDef()} damage taken)`, "dim");
+  const actions = [];
+  for (const id of ownedGear()) {
+    const item = ITEMS[id];
+    const slot = item.kind;
+    if (state.equip[slot] === id) continue;
+    actions.push({
+      label: `Equip ${item.name}`,
+      fn: () => {
+        state.equip[slot] = id;
+        log(`You equip the <b>${item.name}</b>. ${item.desc}`, "system");
+        updateStats();
+        equipMenu();
+      },
+    });
+  }
+  if (state.equip.weapon) {
+    actions.push({
+      label: "Unequip weapon (fight bare-handed)",
+      fn: () => { state.equip.weapon = null; updateStats(); equipMenu(); },
+    });
+  }
+  actions.push({ label: "⬅ Done", fn: showLocation });
+  setActions(actions);
+}
+
 // ---------- travel ----------
 
 function travelMenu() {
@@ -386,8 +471,14 @@ function travelMenu() {
 }
 
 function travelTo(dest) {
+  const bySea = dest === "taohua" || state.location === "taohua";
   log(`You set out for ${LOCATIONS[dest].name}...`, "narration");
   state.location = dest;
+  if (bySea) {
+    log("The fisherman sculls you across calm water. No trouble finds you at sea.", "dim");
+    showLocation();
+    return;
+  }
   if (Math.random() < 0.45) {
     const enemyId = Math.random() < 0.5 ? "wolf" : "bandit";
     log("Trouble on the road!", "combat");
@@ -408,13 +499,18 @@ function showLocation() {
 }
 
 function locationActions() {
+  let a = [];
   switch (state.location) {
-    case "inn": return innActions();
-    case "xiangyang": return xiangyangActions();
-    case "shaolin": return shaolinActions();
-    case "huashan": return huashanActions();
+    case "inn": a = innActions(); break;
+    case "xiangyang": a = xiangyangActions(); break;
+    case "shaolin": a = shaolinActions(); break;
+    case "huashan": a = huashanActions(); break;
+    case "taohua": a = taohuaActions(); break;
   }
-  return [];
+  if (ownedGear().length > 0) {
+    a.splice(a.length - 1, 0, { label: "Equipment 🗡", fn: equipMenu });
+  }
+  return a;
 }
 
 function innActions() {
@@ -505,7 +601,77 @@ function xiangyangActions() {
       setActions(locationActions());
     },
   });
-  a.push({ label: "Visit the market 🏮", fn: () => openShop(["jinchuang", "dahuandan"], showLocation) });
+  a.push({ label: "Visit the market 🏮", fn: () => openShop(["jinchuang", "dahuandan", "ironsword", "buji"], showLocation) });
+  a.push({
+    label: "Hire a boat to Peach Blossom Island (30 silver) ⛵",
+    disabled: state.gold < 30,
+    fn: () => {
+      state.gold -= 30;
+      log('The old fisherman squints at the horizon: "The Isle? Folk say its lord turns visitors around with paths that walk in circles. Your silver, your funeral."', "dialog");
+      updateStats();
+      travelTo("taohua");
+    },
+  });
+  a.push({ label: "Travel 🗺", fn: travelMenu });
+  return a;
+}
+
+function taohuaActions() {
+  const a = [];
+  if (!state.flags.mazeSolved) {
+    a.push({
+      label: "🌸 Enter the Peach Blossom Maze",
+      fn: () => {
+        if (state.wis >= 12) {
+          state.flags.mazeSolved = true;
+          log("Every path curls back on itself — until you notice the petals: they drift with a breeze that should not reach the orchard floor. You follow the wind against the paths, and the maze opens like a folding screen.", "narration");
+          log("Beyond the last hedge, the flute-song stops.", "dim");
+        } else {
+          state.hp = Math.max(1, state.hp - 15);
+          state.wis += 1;
+          log("The paths fold you back to the shore again and again. Bruised by hidden mechanisms, you sketch what you walked in the sand — the pattern is starting to make sense. <b>+1 Insight</b> (reach 12 to solve the maze).", "narration");
+          gainExp(10);
+        }
+        updateStats();
+        setActions(locationActions());
+      },
+    });
+  } else if (!state.flags.isleDuel) {
+    a.push({
+      label: "🎶 Answer the flute's summons — duel the Lord of the Isle",
+      cls: "primary",
+      fn: () => {
+        startCombat("huangdao", {
+          canFlee: false,
+          sparring: true,
+          onWin: () => {
+            state.flags.isleDuel = true;
+            log('The lord lowers his flute, something like approval in his cold eyes. "Solved my maze, stood against my hand. The jianghu is less dull than I feared."', "dialog");
+            log('"Take this soft armor — my daughter has no patience for gifts. And watch my finger: once is all I will show you."', "dialog");
+            addItem("ruanwei");
+            log("Received the Hedgehog Armor 软猬甲.", "system");
+            learnSkill("tanzhi");
+            showLocation();
+          },
+          onLose: () => {
+            log('The lord turns away, flute resuming mid-phrase. "Come back when your kung fu is worth interrupting a song."', "dialog");
+            showLocation();
+          },
+        });
+      },
+    });
+  } else {
+    a.push({
+      label: "Practice the Flicking Finger among the blossoms (+15 exp, −8 energy)",
+      disabled: state.mp < 8,
+      fn: () => {
+        state.mp -= 8;
+        log("You flick petals from the air one by one, each snap of the finger sharper than the last.", "narration");
+        gainExp(15);
+        setActions(locationActions());
+      },
+    });
+  }
   a.push({ label: "Travel 🗺", fn: travelMenu });
   return a;
 }
@@ -596,6 +762,30 @@ function huashanActions() {
       },
     });
   }
+  if (state.quest === 2 && !state.flags.tianxia) {
+    const next = LADDER.find((l) => !state.flags[l.flag]);
+    a.push({
+      label: `🏆 Sword Summit 华山论剑 — challenge ${ENEMIES[next.id].name}`,
+      cls: "primary",
+      fn: () => {
+        heading("🏆 华山论剑 — The Sword Summit");
+        log("Word of your victory has spread. The legends of the age have climbed Mount Hua to test the new generation — in honorable duels, to first fall.", "narration");
+        startCombat(next.id, {
+          canFlee: false,
+          sparring: true,
+          onWin: () => {
+            state.flags[next.flag] = true;
+            next.reward();
+            showLocation();
+          },
+          onLose: () => {
+            log(`${ENEMIES[next.id].name} helps you up with surprising gentleness. "Close. Train, eat, sleep — then climb again."`, "dialog");
+            showLocation();
+          },
+        });
+      },
+    });
+  }
   if (state.quest === 1) {
     a.push({
       label: "⛰ Climb to the summit — face Ghost-Faced Blade",
@@ -620,7 +810,36 @@ function huashanActions() {
   return a;
 }
 
-// ---------- ending ----------
+// ---------- ending & sword summit ----------
+
+const LADDER = [
+  {
+    id: "xidu", flag: "ladder1",
+    reward: () => {
+      log('The white-haired man cackles, delighted and furious at once. "Not bad, not bad! Here — a pill I definitely did not poison." He is probably joking.', "dialog");
+      addItem("dahuandan");
+      log("Received a Great Restoration Pill.", "system");
+    },
+  },
+  {
+    id: "dongxie", flag: "ladder2",
+    reward: () => {
+      log('The East Heretic plays a slow, approving phrase on his flute. "Rules are for the mediocre — and you have stopped being mediocre. Take this blade; it deserves better than my wall."', "dialog");
+      addItem("greenedge");
+      log("Received the Greenedge Sword 青锋剑.", "system");
+    },
+  },
+  {
+    id: "beigai", flag: "ladder3",
+    reward: () => {
+      state.flags.tianxia = true;
+      heading("🏆 天下第一 — First Under Heaven");
+      log('Hong Qigong roars with laughter, rubbing his shoulder. "The palms have found their next keeper! Venom! Heretic! Come drink — the young one buys the chicken!"', "dialog");
+      log("On the summit stone where the greats once dueled, the legends of the age bow to you — <b>First Under Heaven</b>. Your master's little school lives on, at the very top of the jianghu.", "narration");
+      log("🎉 <b>You have cleared everything this build has to offer.</b> The jianghu keeps turning — wander as you please.", "system");
+    },
+  },
+];
 
 function endingVictory() {
   state.quest = 2;
@@ -628,7 +847,9 @@ function endingVictory() {
   log("The ghost mask cracks and falls away. The saber drops from his hand and rings against the summit stone.", "narration");
   log('"Your master... beat me fair on this peak, twenty years ago," he rasps. "I took the coward\'s road for revenge. His student has now beaten me fair in turn... it is... enough."', "dialog");
   log("He turns and descends into the cloud-sea, saber left behind. You stand alone at the summit as the sun breaks over the sea of clouds. Your master is avenged — not with murder, but with mastery.", "narration");
-  log("🎉 <b>You have completed the story of this MVP!</b> The jianghu remains open — keep wandering, or restart to try another origin.", "system");
+  addItem("guitou");
+  log("You take up the Ghost-Head Saber 鬼头刀 he left behind.", "system");
+  log("🎉 <b>The story is complete — but the summit is not quiet for long.</b> Word travels fast in the jianghu; the legends of the age are coming to Mount Hua to test you. (A new challenge awaits here.)", "system");
   updateStats();
   setActions([
     { label: "Continue wandering the jianghu", fn: showLocation },
